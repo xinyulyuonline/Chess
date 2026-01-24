@@ -35,29 +35,50 @@ piece_images = {
     for key, path in piece_files.items()
 }
  
- 
+def _init_chess_game():
+    """
+    Visualize the position of chess sprites on the board
+    """
+    global game, board_state
+    game = Chess_Game()
+    board_state = game.new_game()
+    for y in range(8):
+            for x in range(8):
+                sprite = board_state[y][x]
+                if sprite is None:
+                    continue
+                img = piece_images[(sprite.color, sprite.name)]
+                screen.blit(img, (x * square_size, y * square_size))
+
+
 def run():
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
- 
+            
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                board_pos = calculate_mouse_pos_to_board_pos(mouse_pos)
+                selected_sprite = game.select_sprite(board_pos)
+                if selected_sprite:
+                    print(f"Selected sprite at {board_pos}: {selected_sprite.color} {selected_sprite.name}")
+
+
         screen.blit(board, (0, 0))
- 
-        for y in range(8):
-            for x in range(8):
-                sprite = board_state[y][x]
-                if sprite is None:
-                    continue
-                img = piece_images[(sprite.color, sprite.name)]
-                screen.blit(img, (x * square_size, (7 - y) * square_size))
- 
+        
+        if not game.step_history:
+            _init_chess_game()
+
+
+
+
         pygame.display.flip()
         clock.tick(60)
 
 def calculate_mouse_pos_to_board_pos(mouse_pos: tuple[int, int]) -> tuple[int, int]:
     x, y = mouse_pos
     board_x = x // square_size
-    board_y = (y // square_size)
+    board_y = y // square_size
     return (board_x, board_y)

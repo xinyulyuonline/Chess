@@ -100,7 +100,8 @@ class Chess_Game(BaseModel):
  
     def new_game(self) -> list[list[Chess_Sprite]]:
         self.board = []
- 
+        self.step_history.clear()
+
         for y in range(8):
             row = []
             for x in range(8):
