@@ -98,7 +98,7 @@ class Chess_Game(BaseModel):
 
 
 
-    def new_game(self):
+    def new_game(self) -> list[list[Chess_Sprite]]:
         self.board = []
 
         for y in range(8):
@@ -140,6 +140,7 @@ class Chess_Game(BaseModel):
 
             self.board.append(row)
 
+        return self.board
         
 
     

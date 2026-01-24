@@ -14,6 +14,10 @@ horse_test_data = [
     ((4, 4), (3, 2), True),
     ((4, 4), (5, 5), False),
     ((4, 4), (4, 6), False),
+    ((2, 1), (3, 3), True),
+    ((2, 1), (1, 3), True),
+    ((5, 6), (4, 4), True),
+    ((1, 1), (-4, -3), False),
 ]
 
 @pytest.mark.parametrize("start_pos, target_pos, expected", horse_test_data)
@@ -29,6 +33,9 @@ bishop_test_data = [
     ((4, 4), (7, 1), True),
     ((4, 4), (4, 6), False),
     ((4, 4), (5, 4), False),
+    ((0, 2), (-1, -3), False),
+    ((3, 4), (-2, -1), False),
+    ((6, 6), (9, 9), False),
 ]
 
 @pytest.mark.parametrize("start_pos, target_pos, expected", bishop_test_data)
