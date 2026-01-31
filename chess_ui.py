@@ -13,8 +13,10 @@ board = pygame.image.load(os.path.join(os.path.dirname(__file__), "Images", "che
 board = pygame.transform.scale(board, (800, 800))
  
 game = Chess_Game()
-board_state = game.new_game()
- 
+board_state = []
+
+
+
 piece_files = {
     ("white", "King"): os.path.join(os.path.dirname(__file__), "Images", "king_white.png"),
     ("white", "Queen"): os.path.join(os.path.dirname(__file__), "Images", "queen_white.png"),
@@ -35,23 +37,33 @@ piece_images = {
     for key, path in piece_files.items()
 }
  
-def _init_chess_game():
-    """
-    Visualize the position of chess sprites on the board
+def _init_chess_game(reset: bool = False):
+    """Visualize the position of chess sprites on the board.
+
+    If reset=True, start a new game first. Otherwise, just draw the current state.
     """
     global game, board_state
-    game = Chess_Game()
-    board_state = game.new_game()
+    if reset:
+        game = Chess_Game()
+        board_state = game.new_game()
+    else:
+        board_state = game.board
+
     for y in range(8):
-            for x in range(8):
-                sprite = board_state[y][x]
-                if sprite is None:
-                    continue
-                img = piece_images[(sprite.color, sprite.name)]
-                screen.blit(img, (x * square_size, y * square_size))
+        for x in range(8):
+            sprite = board_state[y][x]
+            if sprite is None:
+                continue
+            img = piece_images[(sprite.color, sprite.name)]
+            screen.blit(img, (x * square_size, y * square_size))
 
 
 def run():
+    sprite_Selected = False
+    selected_sprite = None
+    selected_pos = None
+
+    _init_chess_game(reset=True)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -61,18 +73,39 @@ def run():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
                 board_pos = calculate_mouse_pos_to_board_pos(mouse_pos)
-                selected_sprite = game.select_sprite(board_pos)
-                if selected_sprite:
-                    print(f"Selected sprite at {board_pos}: {selected_sprite.color} {selected_sprite.name}")
+                if board_pos[0] not in range(8) or board_pos[1] not in range(8):
+                    continue
+
+                if not sprite_Selected:
+                    selected_sprite = game.select_sprite(board_pos)
+                    if selected_sprite:
+                        sprite_Selected = True
+                        selected_pos = board_pos
+                    else:
+                        sprite_Selected = False
+                        selected_pos = None
+                else:
+                    if selected_sprite and game.move_sprite(board_pos, selected_sprite):
+                        game.step_history.append((selected_pos, board_pos))
+                        sprite_Selected = False
+                        selected_sprite = None
+                        selected_pos = None
+                    else:
+                        selected_sprite = game.select_sprite(board_pos)
+                        if selected_sprite:
+                            sprite_Selected = True
+                            selected_pos = board_pos
+                        else:
+                            sprite_Selected = False
+                            selected_pos = None
 
 
         screen.blit(board, (0, 0))
-        
-        if not game.step_history:
-            _init_chess_game()
 
+        _init_chess_game()
 
-
+        if sprite_Selected and selected_pos is not None:
+            pygame.draw.rect(screen, (92, 64, 32), (selected_pos[0]*square_size, selected_pos[1]*square_size, square_size, square_size), 5)
 
         pygame.display.flip()
         clock.tick(60)
