@@ -36,6 +36,23 @@ piece_images = {
     key: pygame.transform.scale(pygame.image.load(path), (100, 100))
     for key, path in piece_files.items()
 }
+
+time_font = pygame.font.Font(None, 48)
+
+
+def _draw_player_times():
+    black_seconds = max(0, game.remaining_time_player2)
+    black_minutes = black_seconds // 60
+    black_remaining_seconds = black_seconds % 60
+
+    white_seconds = max(0, game.remaining_time_player1)
+    white_minutes = white_seconds // 60
+    white_remaining_seconds = white_seconds % 60
+
+    black_text = time_font.render(f"Black: {black_minutes:02d}:{black_remaining_seconds:02d}", True, (20, 20, 20))
+    white_text = time_font.render(f"White: {white_minutes:02d}:{white_remaining_seconds:02d}", True, (20, 20, 20))
+    screen.blit(black_text, (840, 30))
+    screen.blit(white_text, (840, 740))
  
 def _init_chess_game(reset: bool = False):
     """Visualize the position of chess sprites on the board.
@@ -103,6 +120,7 @@ def run():
         screen.blit(board, (0, 0))
 
         _init_chess_game()
+        _draw_player_times()
 
         if sprite_Selected and selected_pos is not None:
             pygame.draw.rect(screen, (92, 64, 32), (selected_pos[0]*square_size, selected_pos[1]*square_size, square_size, square_size), 5)
