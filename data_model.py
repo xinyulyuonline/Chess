@@ -194,7 +194,7 @@ class Chess_Game(BaseModel):
         4. update the step history
         5. check if target is occupied by one piece of opponent, then capture it 
             - if the captured piece is king, update winner status
-        6. TODO: check if pawn reaches the other side, then promote it to queen
+        6. check if pawn reaches the other side, then promote it to queen
         """
         cur_x, cur_y = sprite.cur_pos
         target_x, target_y = target_pos
@@ -256,6 +256,12 @@ class Chess_Game(BaseModel):
 
             self.board[cur_y][cur_x] = None
             self.board[target_y][target_x] = sprite
+
+            if isinstance(sprite, Sprite_Pawn):
+                if (sprite.color == "white" and target_y == 7) or (sprite.color == "black" and target_y == 0):
+                    promoted_queen = Sprite_Queen(cur_pos=(target_x, target_y), color=sprite.color, name="Queen")
+                    self.board[target_y][target_x] = promoted_queen
+
             self.step_history.append(((cur_x, cur_y), (target_x, target_y)))
             self.cur_player = not self.cur_player
             self.turn_start_time = time.time()
