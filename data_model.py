@@ -77,7 +77,7 @@ class Sprite_Horse(Chess_Sprite):
             return False
    
 class Sprite_Pawn(Chess_Sprite):
-    def move(self, target_pos: tuple, target_sprite: Chess_Sprite, middle_square_empty: bool = True):
+    def move(self, target_pos: tuple, target_sprite: Chess_Sprite | None = None, middle_square_empty: bool = True):
         cur_x, cur_y = self.cur_pos
         target_x, target_y = target_pos
         direction = 1 if self.color == "white" else -1
@@ -190,32 +190,65 @@ class Chess_Game(BaseModel):
         after moving, do the following actions:
         1. after moving, update the board state
         2. change the current player
-        3. TODO: calculate remaining time for each player
-        4. TODO: update the step history
-        5. TODO: check if target is occopied by one picee of opponent, then capture it 
+        3. calculate remaining time for each player
+        4. update the step history
+        5. check if target is occupied by one piece of opponent, then capture it 
             - if the captured piece is king, update winner status
         6. TODO: check if pawn reaches the other side, then promote it to queen
         """
         cur_x, cur_y = sprite.cur_pos
         target_x, target_y = target_pos
 
+        if self.winner != 0:
+            return False
+
+        elapsed_time = int(time.time() - self.turn_start_time)
+        if self.cur_player == False and self.remaining_time_player1 - elapsed_time <= 0:
+            self.remaining_time_player1 = 0
+            self.winner = 2
+            return False
+        if self.cur_player == True and self.remaining_time_player2 - elapsed_time <= 0:
+            self.remaining_time_player2 = 0
+            self.winner = 1
+            return False
+
         if (self.cur_player == False and sprite.color != "white") or (self.cur_player == True and sprite.color != "black"):
             return False
 
         target_sprite = self.board[target_y][target_x]
 
+        if isinstance(sprite, Sprite_King) and isinstance(target_sprite, Sprite_Tower) and target_sprite.color == sprite.color:
+            if self.castling(sprite.cur_pos, target_pos):
+                if self.cur_player == False:
+                    self.remaining_time_player1 = max(0, self.remaining_time_player1 - elapsed_time)
+                else:
+                    self.remaining_time_player2 = max(0, self.remaining_time_player2 - elapsed_time)
+                self.cur_player = not self.cur_player
+                self.turn_start_time = time.time()
+                return True
+            return False
+
         if target_sprite is not None and target_sprite.color == sprite.color:
             return False
         middle_square_empty = True
         if isinstance(sprite, Sprite_Pawn):
-            direction = 1 if sprite.color == "white" else -1
-            middle_y = cur_y + direction
-            middle_square_empty = self.board[middle_y][cur_x] is None
+            if cur_x == target_x and abs(target_y - cur_y) == 2:
+                direction = 1 if sprite.color == "white" else -1
+                middle_y = cur_y + direction
+                if middle_y not in range(8):
+                    middle_square_empty = False
+                else:
+                    middle_square_empty = self.board[middle_y][cur_x] is None
 
         is_valid_move = sprite.move(target_pos, target_sprite, middle_square_empty) if isinstance(sprite, Sprite_Pawn) else sprite.move(target_pos)
 
         if is_valid_move:
-            elapsed_time = int(time.time() - self.turn_start_time)
+            captured_sprite = target_sprite if target_sprite is not None and target_sprite.color != sprite.color else None
+            if captured_sprite is not None:
+                captured_sprite.status = False
+                if captured_sprite.name == "King":
+                    self.winner = 1 if sprite.color == "white" else 2
+
             if self.cur_player == False:
                 self.remaining_time_player1 = max(0, self.remaining_time_player1 - elapsed_time)
             else:
@@ -223,6 +256,7 @@ class Chess_Game(BaseModel):
 
             self.board[cur_y][cur_x] = None
             self.board[target_y][target_x] = sprite
+            self.step_history.append(((cur_x, cur_y), (target_x, target_y)))
             self.cur_player = not self.cur_player
             self.turn_start_time = time.time()
             return True
@@ -230,4 +264,46 @@ class Chess_Game(BaseModel):
             return False
         
     def castling(self, king_pos: tuple, tower_pos: tuple) -> bool:
-        pass
+        king_x, king_y = king_pos
+        tower_x, tower_y = tower_pos
+
+        if king_x not in range(8) or king_y not in range(8) or tower_x not in range(8) or tower_y not in range(8):
+            return False
+        if king_y != tower_y:
+            return False
+
+        king = self.board[king_y][king_x]
+        tower = self.board[tower_y][tower_x]
+
+        if not isinstance(king, Sprite_King) or not isinstance(tower, Sprite_Tower):
+            return False
+        if king.color != tower.color:
+            return False
+
+        king_has_moved = any(from_pos == king_pos for from_pos, _ in self.step_history)
+        tower_has_moved = any(from_pos == tower_pos for from_pos, _ in self.step_history)
+        if king_has_moved or tower_has_moved:
+            return False
+
+        step = 1 if tower_x > king_x else -1
+        for x in range(king_x + step, tower_x, step):
+            if self.board[king_y][x] is not None:
+                return False
+
+        new_king_x = king_x + 2 * step
+        new_tower_x = new_king_x - step
+        if new_king_x not in range(8) or new_tower_x not in range(8):
+            return False
+
+        self.board[king_y][king_x] = None
+        self.board[tower_y][tower_x] = None
+
+        king.cur_pos = (new_king_x, king_y)
+        tower.cur_pos = (new_tower_x, tower_y)
+
+        self.board[king_y][new_king_x] = king
+        self.board[tower_y][new_tower_x] = tower
+
+        self.step_history.append((king_pos, (new_king_x, king_y)))
+        self.step_history.append((tower_pos, (new_tower_x, tower_y)))
+        return True
